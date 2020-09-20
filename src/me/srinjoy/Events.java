@@ -21,19 +21,33 @@ public class Events extends ListenerAdapter {
             System.out.println("Class:" + obj[0]);
             System.out.println(obj[1]);
             Class<?> clazz = new Execute(obj[0].toString(), obj[1].toString()).execute();
+            if (clazz != null)
             if (obj[2].equals(true)) {
                 try {
                     clazz.getDeclaredMethod("main", String[].class).invoke(clazz.newInstance(), new Object[]{null});
                     Field stringBuffer = clazz.getDeclaredField("stringBuffer");
-                    event.getChannel().sendMessage((StringBuilder)stringBuffer.get(clazz.newInstance())).queue();
+                    event.getChannel().sendMessage("```"+ stringBuffer.get(clazz.newInstance()) +"```").queue();
                     stringBuffer.set(clazz.newInstance(), new StringBuilder());
                 }
+                catch (InvocationTargetException e){
+                    int i = 0;
+                    StringBuilder stringBuilder = new StringBuilder();
+                    stringBuilder.append("```").append("\n");
+                    stringBuilder.append(e.getCause().toString()).append("\n");
+                    for (StackTraceElement stackTraceElement : e.getTargetException().getStackTrace()) {
+                        stringBuilder.append(stackTraceElement.toString()).append("\n");
+                        if (i > 5) break;
+                        i++;
+                    }
+                    stringBuilder.append("```");
+                    event.getChannel().sendMessage(stringBuilder).queue();
+                }
                 catch (NoSuchMethodException e)
-                    { event.getChannel().sendMessage("Constructor matching " + obj[0]+"() not found").queue(); e.printStackTrace(); }
+                    { event.getChannel().sendMessage("```Constructor matching " + obj[0]+"() not found```").queue(); e.printStackTrace(); }
                 catch (IllegalAccessException e)
-                    { event.getChannel().sendMessage("class "+obj[0]+" is not public").queue(); e.printStackTrace(); }
-                catch (InvocationTargetException | InstantiationException | NoSuchFieldException e) {  e.printStackTrace();  }
-            } else event.getChannel().sendMessage("main not found").queue();
+                    { event.getChannel().sendMessage("```class "+obj[0]+" is not public```").queue(); e.printStackTrace(); }
+                catch (InstantiationException | NoSuchFieldException e) {  e.printStackTrace();  }
+            } else event.getChannel().sendMessage("```main method not found```").queue();
         }
     }
     private Object[] format(String message){
@@ -52,7 +66,8 @@ public class Events extends ListenerAdapter {
             if (code.contains("System.out.println")){
                 String args = code.substring(code.indexOf("System.out.println") + "System.out.println".length());
                 args = args.substring(1, args.lastIndexOf(')'));
-                code = code.replace("System.out.println("+args+")", "stringBuffer.append("+args+").append(\"\\n\")");
+                code = code.replace("System.out.println("+args+")", (args.length() > 0)?
+                        "stringBuffer.append("+args+").append(\"\\n\")": "stringBuffer.append(\"\\n\")");
             }
             if (code.contains("System.out.print")){
                 String args = code.substring(code.indexOf("System.out.print") + "System.out.print".length());
